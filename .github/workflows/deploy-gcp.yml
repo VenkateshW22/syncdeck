@@ -79,8 +79,8 @@ jobs:
       - name: Grant Secret Manager Access to Cloud Run Service Account
         run: |
           PROJ="${{ secrets.GCP_PROJECT_ID }}"
-          PROJ_NUM=$(gcloud projects describe "$PROJ" --format="value(projectNumber)")
-          COMPUTE_SA="${PROJ_NUM}-compute@developer.gserviceaccount.com"
+          # Use GCP_PROJECT_NUMBER secret directly — avoids needing Cloud Resource Manager API
+          COMPUTE_SA="${{ secrets.GCP_PROJECT_NUMBER }}-compute@developer.gserviceaccount.com"
 
           echo "Granting secretAccessor to: $COMPUTE_SA"
 
