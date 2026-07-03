@@ -56,12 +56,15 @@ jobs:
       - name: Ensure GCP Secret Manager Secrets Exist
         run: |
           PROJ="${{ secrets.GCP_PROJECT_ID }}"
+
           create_secret_if_missing() {
             local sec_id="$1"
             local default_val="$2"
             if ! gcloud secrets describe "$sec_id" --project="$PROJ" &>/dev/null; then
               echo -n "$default_val" | gcloud secrets create "$sec_id" --data-file=- --project="$PROJ"
               echo "Created secret: $sec_id"
+            else
+              echo "Secret already exists: $sec_id"
             fi
           }
 
@@ -70,15 +73,37 @@ jobs:
 
           create_secret_if_missing "syncdeck-jwt-secret" "$JWT_VAL"
           create_secret_if_missing "syncdeck-refresh-secret" "$REFRESH_VAL"
-          create_secret_if_missing "syncdeck-db-url" ""
-          create_secret_if_missing "syncdeck-redis-url" ""
+          create_secret_if_missing "syncdeck-db-url" "placeholder"
+          create_secret_if_missing "syncdeck-redis-url" "placeholder"
 
-          PROJ_NUM=$(gcloud projects describe "$PROJ" --format="value(projectNumber)" 2>/dev/null || echo "")
-          if [ -n "$PROJ_NUM" ]; then
-            gcloud projects add-iam-policy-binding "$PROJ" \
-              --member="serviceAccount:${PROJ_NUM}-compute@developer.gserviceaccount.com" \
-              --role="roles/secretmanager.secretAccessor" --quiet || true
-          fi
+      - name: Grant Secret Manager Access to Cloud Run Service Account
+        run: |
+          PROJ="${{ secrets.GCP_PROJECT_ID }}"
+          PROJ_NUM=$(gcloud projects describe "$PROJ" --format="value(projectNumber)")
+          COMPUTE_SA="${PROJ_NUM}-compute@developer.gserviceaccount.com"
+
+          echo "Granting secretAccessor to: $COMPUTE_SA"
+
+          # Grant project-level role (catches any new secrets automatically)
+          gcloud projects add-iam-policy-binding "$PROJ" \
+            --member="serviceAccount:${COMPUTE_SA}" \
+            --role="roles/secretmanager.secretAccessor" \
+            --condition=None \
+            --quiet
+
+          # Also grant at secret resource level for defence-in-depth
+          for SECRET in syncdeck-jwt-secret syncdeck-refresh-secret syncdeck-db-url syncdeck-redis-url; do
+            gcloud secrets add-iam-policy-binding "$SECRET" \
+              --project="$PROJ" \
+              --member="serviceAccount:${COMPUTE_SA}" \
+              --role="roles/secretmanager.secretAccessor" \
+              --quiet
+            echo "  ✓ $SECRET — access granted"
+          done
+
+          # Brief wait for IAM propagation before deploy reads secrets
+          echo "Waiting 15s for IAM propagation..."
+          sleep 15
 
       - name: Build & Push Container Image to Artifact Registry
         run: |

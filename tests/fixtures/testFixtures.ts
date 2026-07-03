@@ -8,18 +8,15 @@ type CustomFixtures = {
   landingPage: LandingPage;
   hostDashboard: HostDashboardPage;
   createParticipant: (name: string) => Promise<{ page: Page; dashboard: ParticipantDashboardPage; context: BrowserContext }>;
+  dbCleanup: void;
 };
 
 export const test = base.extend<CustomFixtures>({
-  // Clean up database before and after each test
-  beforeEach: [async ({}, use) => {
+  // Auto-fixture: clears DB + Redis before and after every test that uses this base
+  dbCleanup: [async ({}, use) => {
     await clearDatabaseAndRedis();
     await use();
-  }, { auto: true }],
-
-  afterEach: [async ({}, use) => {
     await clearDatabaseAndRedis();
-    await use();
   }, { auto: true }],
 
   landingPage: async ({ page }, use) => {

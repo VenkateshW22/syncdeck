@@ -72,7 +72,7 @@ describe("SharedCanvas Point Scaling & Normalization", () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(1024);
 
     const { container } = render(
-      <SharedCanvas isHost={true} socket={null} isDark={false} />
+      <SharedCanvas isHost={true} />
     );
 
     // Force offsetWidth mockup on the element

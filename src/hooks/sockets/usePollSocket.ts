@@ -19,7 +19,7 @@ export function usePollSocket(options?: PollSocketOptions) {
     if (!socket) return;
 
     const handlePollStarted = ({ pollId, question, options: pollOptions }: { pollId: string; question: string; options: string[] }) => {
-      setPoll({ id: pollId, question, options: pollOptions, active: true });
+      setPoll({ id: pollId, question, options: pollOptions, isActive: true });
       if (optionsRef.current?.onPollStarted) {
         optionsRef.current.onPollStarted(pollId, question, pollOptions);
       }
