@@ -1,0 +1,127 @@
+# -----------------------------------------------------------------------
+# docker-compose.staging.yml
+#
+# Staging stack — production-identical config with lighter resource limits.
+# Run from the repo root:
+#
+#   cp .env.staging.example .env.staging
+#   # Fill in real JWT_SECRET, REFRESH_SECRET, POSTGRES_PASSWORD, etc.
+#   docker compose -f docker-compose.staging.yml up -d --build
+#
+# All secrets come from .env.staging (git-ignored). Nothing is hardcoded.
+# -----------------------------------------------------------------------
+
+services:
+  # -----------------------------------------------------------------------
+  # Nginx — reverse proxy, gzip, security headers, WebSocket upgrade.
+  # Terminates HTTP on port 80. Put a TLS-terminating load balancer or
+  # Cloudflare in front of this for HTTPS in staging.
+  # -----------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.staging.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      syncdeck:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # -----------------------------------------------------------------------
+  # App — uses the dedicated 'staging' Dockerfile stage which sets
+  # NODE_ENV=staging. This triggers strict env-var validation (no fallbacks)
+  # while keeping staging logs more verbose than production.
+  # -----------------------------------------------------------------------
+  syncdeck:
+    build:
+      context: .
+      target: staging          # Uses the 'staging' Dockerfile stage (NODE_ENV=staging)
+      args:
+        VITE_APP_ENV: staging
+        VITE_APP_NAME: "SyncDeck (Staging)"
+    restart: unless-stopped
+    # Do NOT expose port 3000 externally — all traffic flows through Nginx.
+    expose:
+      - "3000"
+    env_file:
+      - .env.staging
+    environment:
+      - NODE_ENV=staging
+      # Compose-service hostnames override whatever DATABASE_URL / REDIS_URL
+      # is in .env.staging if you're using the bundled db/redis below.
+      # Comment these out if you're pointing at an external managed DB/Redis.
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/syncdeck
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      # Persist uploaded files across container restarts.
+      - ./uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully   # App only starts after migrations finish
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  # -----------------------------------------------------------------------
+  # Migration runner — one-shot container that applies pending Drizzle
+  # migrations and exits. The app service waits for this to succeed
+  # (condition: service_completed_successfully) before starting.
+  # -----------------------------------------------------------------------
+  migrate:
+    build:
+      context: .
+      target: staging
+    env_file:
+      - .env.staging
+    environment:
+      - NODE_ENV=staging
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/syncdeck
+    command: node dist/scripts/migrate.cjs
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.staging}
+      - POSTGRES_DB=syncdeck
+    volumes:
+      - staging_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - staging_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  staging_postgres_data:
+  staging_redis_data:

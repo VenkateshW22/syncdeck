@@ -1,0 +1,60 @@
+# Production-shaped stack for self-hosting (e.g. a single VM/VPS). For a
+# managed deployment (Cloud Run, ECS, etc.) build the image from Dockerfile
+# and point it at managed Postgres/Redis instead of the db/redis services
+# below.
+#
+# Usage:
+#   cp .env.example .env   # fill in real JWT_SECRET, REFRESH_SECRET, etc.
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# All secrets come from ./.env (git-ignored) — none are hardcoded here.
+
+services:
+  syncdeck:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/syncdeck
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      - POSTGRES_DB=syncdeck
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

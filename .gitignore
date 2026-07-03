@@ -1,0 +1,21 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+
+# Secret env files — never commit these
+.env
+.env.staging
+.env.production
+.env.local
+
+# Allow safe, secret-free env files to be tracked
+!.env.example
+!.env.development
+!.env.staging.example
+!.env.production.example
+
+# Local uploads folder
+/uploads/

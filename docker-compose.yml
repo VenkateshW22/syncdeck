@@ -1,0 +1,60 @@
+# Local development stack. Runs the app with hot-reload (tsx + Vite dev
+# middleware) against real Postgres and Redis containers.
+#
+# Secrets are NOT hardcoded here — create a ".env" file next to this one
+# (copy .env.example) and Compose will load it automatically. Never commit
+# your real .env file.
+
+services:
+  syncdeck-dev:
+    build:
+      context: .
+      target: deps # installs deps only; no production build needed for `npm run dev`
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/syncdeck
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_only_jwt_secret_do_not_use_in_prod}
+      - REFRESH_SECRET=${REFRESH_SECRET:-dev_only_refresh_secret_do_not_use_in_prod}
+      - APP_ORIGIN=${APP_ORIGIN:-http://localhost:3000}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=syncdeck
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

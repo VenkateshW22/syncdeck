@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=Inter:opsz,wght@14..32,100..900&display=swap');
+@import "tailwindcss";
+
+:root {
+  --brand-bg: #f8fafc;
+  --brand-surface: #ffffff;
+  --brand-primary: #4f46e5;
+  --brand-secondary: #06b6d4;
+  --brand-accent: #14b8a6;
+  --brand-success: #22c55e;
+  --brand-warning: #f59e0b;
+  --brand-error: #ef4444;
+  --brand-text: #0f172a;
+  --brand-muted: #64748b;
+}
+
+.dark {
+  --brand-bg: #0B1020;
+  --brand-surface: #111827;
+  --brand-primary: #4F46E5;
+  --brand-secondary: #06B6D4;
+  --brand-accent: #14B8A6;
+  --brand-success: #22C55E;
+  --brand-warning: #F59E0B;
+  --brand-error: #EF4444;
+  --brand-text: #F9FAFB;
+  --brand-muted: #9CA3AF;
+}
+
+@theme {
+  --font-sans: "Geist", "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-success: var(--brand-success);
+  --color-brand-warning: var(--brand-warning);
+  --color-brand-error: var(--brand-error);
+  --color-brand-text: var(--brand-text);
+  --color-brand-muted: var(--brand-muted);
+
+  /* Precise color mappings for user specifications */
+  --color-indigo-600: #4F46E5;
+  --color-indigo-500: #4F46E5;
+  --color-cyan-500: #06B6D4;
+  --color-teal-500: #14B8A6;
+  --color-green-500: #22C55E;
+  --color-amber-500: #F59E0B;
+  --color-red-500: #EF4444;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+html, body {
+  background-color: var(--brand-bg);
+  color: var(--brand-text);
+  min-height: 100vh;
+  margin: 0;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}

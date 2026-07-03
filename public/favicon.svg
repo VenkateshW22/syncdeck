@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="black"/>
+  
+  <g transform="translate(15, 3)">
+    <!-- Dot -->
+    <circle cx="130" cy="136" r="20" fill="white"/>
+    
+    <!-- Outer 'S' and bottom -->
+    <path d="M 170 136 
+             h 110 
+             a 100 100 0 0 1 100 100 
+             a 100 100 0 0 1 -100 100 
+             h -100 
+             a 50 50 0 0 0 -50 50 
+             a 50 50 0 0 0 50 50 
+             h 130" 
+          stroke="white" stroke-width="40" stroke-linecap="round" fill="none"/>
+          
+    <!-- Inner 'D' top loop -->
+    <path d="M 170 236 
+             h 50 
+             a 50 50 0 0 0 50 -50 
+             a 50 50 0 0 0 -50 -50 
+             h -20" 
+          stroke="white" stroke-width="40" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
