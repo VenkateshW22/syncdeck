@@ -42,6 +42,10 @@ metadata.json
 # Local load testing config (not part of the app)
 load-test.yml
 
+# Documentation files — keep only README.md
+*.md
+!README.md
+
 # Terraform local state & secrets — never commit
 terraform/.terraform/
 terraform/*.tfstate
