@@ -44,7 +44,7 @@ jobs:
 
       - name: Configure Docker for Artifact Registry & Ensure Repository Exists
         run: |
-          gcloud services enable artifactregistry.googleapis.com run.googleapis.com secretmanager.googleapis.com --project="${{ secrets.GCP_PROJECT_ID }}"
+          gcloud services enable artifactregistry.googleapis.com run.googleapis.com secretmanager.googleapis.com --project="${{ secrets.GCP_PROJECT_ID }}" || true
           gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
           gcloud artifacts repositories describe syncdeck-repo --location=${{ env.GCP_REGION }} --project="${{ secrets.GCP_PROJECT_ID }}" &>/dev/null || \
           gcloud artifacts repositories create syncdeck-repo \
