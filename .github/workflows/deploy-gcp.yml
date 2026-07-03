@@ -42,9 +42,36 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
+      - name: Configure Docker for Artifact Registry & Ensure Repository Exists
         run: |
+          gcloud services enable artifactregistry.googleapis.com run.googleapis.com secretmanager.googleapis.com --project="${{ secrets.GCP_PROJECT_ID }}"
           gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+          gcloud artifacts repositories describe syncdeck-repo --location=${{ env.GCP_REGION }} --project="${{ secrets.GCP_PROJECT_ID }}" &>/dev/null || \
+          gcloud artifacts repositories create syncdeck-repo \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --description="SyncDeck production container repository" \
+            --project="${{ secrets.GCP_PROJECT_ID }}"
+
+      - name: Ensure GCP Secret Manager Secrets Exist
+        run: |
+          PROJ="${{ secrets.GCP_PROJECT_ID }}"
+          create_secret_if_missing() {
+            local sec_id="$1"
+            local default_val="$2"
+            if ! gcloud secrets describe "$sec_id" --project="$PROJ" &>/dev/null; then
+              echo -n "$default_val" | gcloud secrets create "$sec_id" --data-file=- --project="$PROJ"
+              echo "Created secret: $sec_id"
+            fi
+          }
+
+          JWT_VAL=$(openssl rand -base64 48)
+          REFRESH_VAL=$(openssl rand -base64 48)
+
+          create_secret_if_missing "syncdeck-jwt-secret" "$JWT_VAL"
+          create_secret_if_missing "syncdeck-refresh-secret" "$REFRESH_VAL"
+          create_secret_if_missing "syncdeck-db-url" ""
+          create_secret_if_missing "syncdeck-redis-url" ""
 
       - name: Build & Push Container Image to Artifact Registry
         run: |
