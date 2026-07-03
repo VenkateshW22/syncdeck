@@ -32,9 +32,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Authenticate to GCP (Workload Identity Federation)
+      - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
