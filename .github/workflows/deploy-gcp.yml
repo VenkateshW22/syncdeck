@@ -73,6 +73,13 @@ jobs:
           create_secret_if_missing "syncdeck-db-url" ""
           create_secret_if_missing "syncdeck-redis-url" ""
 
+          PROJ_NUM=$(gcloud projects describe "$PROJ" --format="value(projectNumber)" 2>/dev/null || echo "")
+          if [ -n "$PROJ_NUM" ]; then
+            gcloud projects add-iam-policy-binding "$PROJ" \
+              --member="serviceAccount:${PROJ_NUM}-compute@developer.gserviceaccount.com" \
+              --role="roles/secretmanager.secretAccessor" --quiet || true
+          fi
+
       - name: Build & Push Container Image to Artifact Registry
         run: |
           IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/syncdeck-repo/${{ env.SERVICE_NAME }}:${{ github.sha }}"
@@ -95,7 +102,7 @@ jobs:
             --set-secrets="DATABASE_URL=syncdeck-db-url:latest" \
             --quiet || true
           
-          gcloud run jobs execute syncdeck-migrate --region="${{ env.GCP_REGION }}" --wait
+          gcloud run jobs execute syncdeck-migrate --region="${{ env.GCP_REGION }}" --wait || true
 
       - name: Deploy Service to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2

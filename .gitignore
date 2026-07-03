@@ -17,5 +17,13 @@ coverage/
 !.env.staging.example
 !.env.production.example
 
+# Test output & report directories
+playwright-report/
+test-results/
+
+# GCP Service Account keys
+sa-key.json
+*.json.key
+
 # Local uploads folder
 /uploads/
