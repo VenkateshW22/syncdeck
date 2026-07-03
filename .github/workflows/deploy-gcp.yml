@@ -90,8 +90,21 @@ jobs:
           docker push "$IMAGE_URI"
 
       - name: Run Database Migrations via Cloud Run Job
+        continue-on-error: true
         run: |
-          IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/syncdeck-repo/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          PROJ="${{ secrets.GCP_PROJECT_ID }}"
+          IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${PROJ}/syncdeck-repo/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+
+          # Guard: only run migrations if syncdeck-db-url has a real (non-placeholder) version
+          DB_VAL=$(gcloud secrets versions access latest \
+            --secret="syncdeck-db-url" --project="$PROJ" 2>/dev/null || echo "")
+
+          if [[ -z "$DB_VAL" || "$DB_VAL" == "placeholder" ]]; then
+            echo "⚠️  syncdeck-db-url is empty or placeholder — skipping migrations."
+            echo "   Set a real DATABASE_URL in Secret Manager and redeploy to run migrations."
+            exit 0
+          fi
+
           gcloud run jobs deploy syncdeck-migrate \
             --image="$IMAGE_URI" \
             --region="${{ env.GCP_REGION }}" \
@@ -99,22 +112,43 @@ jobs:
             --args="dist/scripts/migrate.cjs" \
             --set-env-vars="NODE_ENV=production" \
             --set-secrets="DATABASE_URL=syncdeck-db-url:latest" \
-            --quiet || true
-          
-          gcloud run jobs execute syncdeck-migrate --region="${{ env.GCP_REGION }}" --wait || true
+            --quiet
+
+          gcloud run jobs execute syncdeck-migrate \
+            --region="${{ env.GCP_REGION }}" \
+            --wait
 
       - name: Deploy Service to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE_NAME }}
-          region: ${{ env.GCP_REGION }}
-          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/syncdeck-repo/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          flags: |
+        run: |
+          PROJ="${{ secrets.GCP_PROJECT_ID }}"
+          IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${PROJ}/syncdeck-repo/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+
+          # Check if DB/Redis secrets have real values yet
+          DB_VAL=$(gcloud secrets versions access latest \
+            --secret="syncdeck-db-url" --project="$PROJ" 2>/dev/null || echo "placeholder")
+
+          BASE_FLAGS=(
+            --image="$IMAGE_URI"
+            --region="${{ env.GCP_REGION }}"
+            --service-account="${{ secrets.GCP_PROJECT_NUMBER }}-compute@developer.gserviceaccount.com"
             --session-affinity
             --min-instances=1
             --max-instances=20
             --port=3000
             --cpu=2
             --memory=2Gi
-            --set-env-vars=NODE_ENV=production,APP_ORIGIN=${{ secrets.APP_ORIGIN }},APP_URL=${{ secrets.APP_ORIGIN }}
-            --set-secrets=JWT_SECRET=syncdeck-jwt-secret:latest,REFRESH_SECRET=syncdeck-refresh-secret:latest,DATABASE_URL=syncdeck-db-url:latest,REDIS_URL=syncdeck-redis-url:latest
+            --set-env-vars="NODE_ENV=production,APP_ORIGIN=${{ secrets.APP_ORIGIN }},APP_URL=${{ secrets.APP_ORIGIN }}"
+            --set-secrets="JWT_SECRET=syncdeck-jwt-secret:latest,REFRESH_SECRET=syncdeck-refresh-secret:latest"
+            --quiet
+          )
+
+          if [[ -z "$DB_VAL" || "$DB_VAL" == "placeholder" ]]; then
+            echo "⚠️  DB/Redis secrets are placeholders — deploying without DB/Redis secret bindings."
+            echo "   App will start but DB/Redis features won't work until real secrets are set."
+            gcloud run deploy "${{ env.SERVICE_NAME }}" "${BASE_FLAGS[@]}" \
+              --update-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},REDIS_URL=${{ secrets.REDIS_URL }}"
+          else
+            echo "✅ Real DB/Redis secrets found — binding from Secret Manager."
+            gcloud run deploy "${{ env.SERVICE_NAME }}" "${BASE_FLAGS[@]}" \
+              --update-secrets="DATABASE_URL=syncdeck-db-url:latest,REDIS_URL=syncdeck-redis-url:latest"
+          fi
