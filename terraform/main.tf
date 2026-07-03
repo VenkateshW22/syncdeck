@@ -75,6 +75,8 @@ resource "google_cloud_run_v2_service" "syncdeck_app" {
   template {
     session_affinity = true
 
+    service_account = google_service_account.cloud_run_sa.email
+
     scaling {
       min_instance_count = 1
       max_instance_count = 20

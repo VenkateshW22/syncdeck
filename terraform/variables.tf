@@ -25,3 +25,13 @@ variable "container_image" {
   type        = string
   description = "Full Artifact Registry URI of the built container image (e.g. us-central1-docker.pkg.dev/PROJECT/repo/syncdeck:latest)."
 }
+
+variable "github_repo" {
+  type        = string
+  description = "GitHub repository in 'owner/repo' format used for Workload Identity Federation. e.g. 'myorg/syncdeck'."
+}
+
+variable "ops_alert_email" {
+  type        = string
+  description = "Email address to send Cloud Monitoring alert notifications to."
+}

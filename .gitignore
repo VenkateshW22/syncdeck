@@ -23,7 +23,33 @@ test-results/
 
 # GCP Service Account keys
 sa-key.json
+gha-creds-*.json
 *.json.key
 
 # Local uploads folder
 /uploads/
+
+# IDE / editor artefacts
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+
+# Antigravity / IDE workspace metadata (not project code)
+metadata.json
+
+# Local load testing config (not part of the app)
+load-test.yml
+
+# Terraform local state & secrets — never commit
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+terraform/crash.log
+terraform/.terraform.lock.hcl
+
+# Artillery / k6 / local perf test outputs
+*.artillery.json
+*.k6-summary.json
