@@ -83,13 +83,19 @@ jobs:
           REDIS_URL=redis://redis:6379
           APP_ORIGIN=http://localhost:80
           APP_URL=http://localhost:80
-          cp .env.staging .env
-          docker compose -f docker-compose.staging.yml up -d --no-build
+          EOF
+          docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --no-build
 
       - name: Wait for health endpoint
         run: ./scripts/smoke-test.sh http://localhost:80
         timeout-minutes: 2
 
+      - name: Print container logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.staging.yml --env-file .env.staging ps
+          docker compose -f docker-compose.staging.yml --env-file .env.staging logs
+
       - name: Tear down
         if: always()
-        run: docker compose -f docker-compose.staging.yml down -v
+        run: docker compose -f docker-compose.staging.yml --env-file .env.staging down -v
