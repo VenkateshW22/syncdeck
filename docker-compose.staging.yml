@@ -40,6 +40,7 @@ services:
   # while keeping staging logs more verbose than production.
   # -----------------------------------------------------------------------
   syncdeck:
+    image: syncdeck:ci-smoke
     build:
       context: .
       target: staging          # Uses the 'staging' Dockerfile stage (NODE_ENV=staging)
@@ -82,6 +83,7 @@ services:
   # (condition: service_completed_successfully) before starting.
   # -----------------------------------------------------------------------
   migrate:
+    image: syncdeck:ci-smoke
     build:
       context: .
       target: staging
