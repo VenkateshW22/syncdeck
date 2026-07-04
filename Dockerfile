@@ -12,7 +12,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci || (sleep 3 && npm ci) || (sleep 3 && npm ci)
 
 # ---- Builder ---------------------------------------------------------------
 # Produces the production build:
@@ -44,7 +44,7 @@ ENV NODE_ENV=staging
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN (npm ci --omit=dev || (sleep 3 && npm ci --omit=dev) || (sleep 3 && npm ci --omit=dev)) && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./dist/drizzle
@@ -68,7 +68,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN (npm ci --omit=dev || (sleep 3 && npm ci --omit=dev) || (sleep 3 && npm ci --omit=dev)) && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./dist/drizzle
