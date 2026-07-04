@@ -138,7 +138,6 @@ jobs:
             --cpu=2
             --memory=2Gi
             --set-env-vars="NODE_ENV=production,APP_ORIGIN=${{ secrets.APP_ORIGIN }},APP_URL=${{ secrets.APP_ORIGIN }}"
-            --set-secrets="JWT_SECRET=syncdeck-jwt-secret:latest,REFRESH_SECRET=syncdeck-refresh-secret:latest"
             --quiet
           )
 
@@ -146,9 +145,10 @@ jobs:
             echo "⚠️  DB/Redis secrets are placeholders — deploying without DB/Redis secret bindings."
             echo "   App will start but DB/Redis features won't work until real secrets are set."
             gcloud run deploy "${{ env.SERVICE_NAME }}" "${BASE_FLAGS[@]}" \
+              --set-secrets="JWT_SECRET=syncdeck-jwt-secret:latest,REFRESH_SECRET=syncdeck-refresh-secret:latest" \
               --update-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},REDIS_URL=${{ secrets.REDIS_URL }}"
           else
             echo "✅ Real DB/Redis secrets found — binding from Secret Manager."
             gcloud run deploy "${{ env.SERVICE_NAME }}" "${BASE_FLAGS[@]}" \
-              --update-secrets="DATABASE_URL=syncdeck-db-url:latest,REDIS_URL=syncdeck-redis-url:latest"
+              --set-secrets="JWT_SECRET=syncdeck-jwt-secret:latest,REFRESH_SECRET=syncdeck-refresh-secret:latest,DATABASE_URL=syncdeck-db-url:latest,REDIS_URL=syncdeck-redis-url:latest"
           fi
