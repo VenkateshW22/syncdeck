@@ -82,8 +82,8 @@ jobs:
           REDIS_URL=redis://redis:6379
           APP_ORIGIN=http://localhost:80
           APP_URL=http://localhost:80
-          EOF
-          docker compose -f docker-compose.staging.yml up -d --no-build 2>&1 || true
+          cp .env.staging .env
+          docker compose -f docker-compose.staging.yml up -d --no-build
 
       - name: Wait for health endpoint
         run: ./scripts/smoke-test.sh http://localhost:80
