@@ -256,7 +256,13 @@ if ((process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging"
 }
 
 export const redisClient = process.env.REDIS_URL
-  ? (createClient({ url: process.env.REDIS_URL }) as any)
+  ? (createClient({
+      url: process.env.REDIS_URL,
+      socket: {
+        pingInterval: 10000, // Sends ping every 10 seconds to keep connection alive
+        keepAlive: 5000     // Enable keepAlive packets at the TCP level
+      }
+    }) as any)
   : new InMemoryRedisMock();
 
 // node-redis emits 'error' events on transient connection issues (reset,
@@ -308,11 +314,25 @@ export async function checkReplay(requestId: string): Promise<boolean> {
 }
 
 export async function connectRedis() {
-  if (process.env.REDIS_URL) {
-    if (!redisClient.isOpen) {
+  if (!redisClient.isOpen) {
+    if (process.env.REDIS_URL) {
+      console.log("[Redis] Connecting to Redis server...");
+      
+      // Prevent connection hang from blocking server boot (timeout after 5 seconds)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Connection attempt timed out (5s)")), 5000)
+      );
+
+      try {
+        await Promise.race([redisClient.connect(), timeoutPromise]);
+        console.log("[Redis] Successfully connected to Redis.");
+      } catch (err: any) {
+        console.error("[Redis] Connection failed on startup:", err.message);
+        console.warn("[Redis] Proceeding with server boot. Redis client will attempt to reconnect in the background.");
+      }
+    } else {
+      // In-memory mock connection
       await redisClient.connect();
     }
-  } else if (!redisClient.isOpen) {
-    await redisClient.connect();
   }
 }

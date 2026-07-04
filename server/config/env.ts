@@ -1,8 +1,14 @@
 import dotenv from "dotenv";
 
-// Load variables from a local .env file (no-op if the file doesn't exist,
-// e.g. in Cloud Run / Docker where env vars are injected directly).
 dotenv.config();
+
+// Defensive cleanup: Trim whitespaces/newlines from critical connection strings and origins
+// (GCP Secret Manager copy-pasting often introduces trailing newlines).
+for (const key of ["DATABASE_URL", "REDIS_URL", "APP_ORIGIN", "APP_URL", "JWT_SECRET", "REFRESH_SECRET"]) {
+  if (process.env[key]) {
+    process.env[key] = process.env[key]!.trim();
+  }
+}
 
 const NODE_ENV = process.env.NODE_ENV || "development";
 const IS_PRODUCTION = NODE_ENV === "production";
