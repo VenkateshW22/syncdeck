@@ -52,8 +52,19 @@ async function startServer() {
   const roomController = new RoomController();
   const fileController = new FileController();
 
-  // Middleware
   app.use(compression());
+
+  // Redirect HTTP to HTTPS in production on Cloud Run (trust proxy header)
+  app.use((req, res, next) => {
+    if (
+      env.IS_PROD_LIKE &&
+      req.headers["x-forwarded-proto"] === "http"
+    ) {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+
   app.use(helmet({
     // H5 FIX: Enable CSP for ALL environments (production, staging, development).
     // Disabling CSP in non-production environments masks XSS issues during testing.

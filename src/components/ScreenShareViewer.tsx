@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSocket } from "../context/SocketContext";
 import { useStore } from "../store";
 import { Tv } from "lucide-react";
+import { toast } from "sonner";
 
 type ConnectionState = "IDLE" | "REQUESTING" | "NEGOTIATING" | "CONNECTED" | "RECONNECTING" | "STOPPING" | "STOPPED" | "FAILED";
 
@@ -85,6 +86,8 @@ export function ScreenShareViewer() {
       try {
         if (payload.targetId && participantId && payload.targetId !== participantId) return;
 
+        console.log("[WebRTC] WebRTC Offer received from host:", payload.sourceId);
+        toast.info("Connecting to host screen share feed...");
         transitionState("NEGOTIATING");
         
         // Clean up any existing connection first
@@ -99,16 +102,20 @@ export function ScreenShareViewer() {
         pcRef.current = pc;
 
         pc.ontrack = (event) => {
+          console.log("[WebRTC] Received remote stream track");
           if (videoRef.current) {
             videoRef.current.srcObject = event.streams[0];
           }
         };
 
         pc.oniceconnectionstatechange = () => {
+          console.log("[WebRTC] ICE Connection State changed to:", pc.iceConnectionState);
           if (pc.iceConnectionState === "connected") {
             transitionState("CONNECTED");
+            toast.success("Screen share connected!");
           } else if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
             transitionState("FAILED");
+            toast.error("Screen share connection failed or disconnected.");
             // Automatically attempt to reconnect if we are still active
             if (isActiveRef.current) {
                console.log("[Viewer] Connection failed/disconnected, requesting stream again...");

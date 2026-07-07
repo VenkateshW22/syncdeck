@@ -75,11 +75,14 @@ export function ScreenShareHost() {
           };
           
           pc.oniceconnectionstatechange = () => {
+            console.log(`[WebRTC] ICE Connection State for ${targetId} changed to:`, pc.iceConnectionState);
             if (pc.iceConnectionState === 'connected') {
               transitionState(targetId, "CONNECTED");
               retryCountRef.current[targetId] = 0; // reset on success
+              toast.success("Participant connected to screen share feed!");
             } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
               transitionState(targetId, "FAILED");
+              toast.error("Participant screen share connection disconnected.");
               
               const attempts = retryCountRef.current[targetId] || 0;
               if (attempts < 3) {
