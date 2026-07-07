@@ -278,6 +278,7 @@ export function ScreenShareHost() {
     peersRef.current = {};
     candidateQueuesRef.current = {};
     retryTimeoutsRef.current = {};
+    stateRef.current = {};
     const requestId = Math.random().toString(36).substring(2, 15);
     socket?.emit("STOP_SCREEN_SHARE", { requestId });
     toast.info("Screen sharing stopped");

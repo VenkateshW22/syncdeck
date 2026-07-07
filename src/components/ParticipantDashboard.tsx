@@ -409,6 +409,11 @@ export function ParticipantDashboard() {
         <div className="flex-1 overflow-auto p-4 w-full xl:max-w-7xl mx-auto space-y-4">
           <NextActionPanel resources={resources} />
           
+          {/* Centered big screen share */}
+          <div className="w-full">
+            <ScreenShareViewer />
+          </div>
+          
           {/* Centered big whiteboard */}
           <div className="w-full">
             <SharedCanvas isHost={isCohost} />
@@ -417,7 +422,6 @@ export function ParticipantDashboard() {
           {/* Main interactive area: split into two columns on large screens */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <ScreenShareViewer />
               <QuickPollParticipant />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" id="personal-notes-container">
