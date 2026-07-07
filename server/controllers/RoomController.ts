@@ -388,6 +388,7 @@ export class RoomController {
           userId: host.id,
           roomId: room.id,
           role: "HOST",
+          displayName: host.displayName,
         },
         "24h",
       );
@@ -449,6 +450,7 @@ export class RoomController {
           userId: participant.id,
           roomId: room.id,
           role: "PARTICIPANT",
+          displayName: participant.displayName,
         },
         "12h",
       );

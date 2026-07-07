@@ -420,7 +420,7 @@ export function ParticipantDashboard() {
               <ScreenShareViewer />
               <QuickPollParticipant />
             </div>
-            <div className="space-y-4" id="personal-notes-container">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" id="personal-notes-container">
               <PersonalNotesPanel roomId={roomId} resources={resources} />
               <LiveActivityFeed participants={participants} />
             </div>

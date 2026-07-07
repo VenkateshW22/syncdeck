@@ -55,7 +55,20 @@ export function ScreenShareHost() {
           candidateQueuesRef.current[targetId] = [];
           
           const pc = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+            iceServers: [
+              { urls: "stun:stun.l.google.com:19302" },
+              { urls: "stun:relay.metered.ca:80" },
+              {
+                urls: "turn:relay.metered.ca:80?transport=udp",
+                username: "metered",
+                credential: "metered"
+              },
+              {
+                urls: "turn:relay.metered.ca:443?transport=tcp",
+                username: "metered",
+                credential: "metered"
+              }
+            ],
           });
           peersRef.current[targetId] = pc;
   
