@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { SocketEvents } from "../../../src/constants/socketEvents";
 import { consumeTokenBucket, redisClient } from "../../utils/redis";
 import { logger } from "../../../server";
+import { ParticipantRepository } from "../../repositories/ParticipantRepository";
 
 export function registerScreenShareHandlers(
   io: any,
@@ -63,7 +64,8 @@ export function registerScreenShareHandlers(
         await redisClient.expire(`room:${user.roomId}:offer:${requestId}`, 60);
       }
 
-      const isTargetOnline = await redisClient.sIsMember(`room:${user.roomId}:users`, payload.targetId);
+      const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
+      const isTargetOnline = targetSockets && targetSockets.length > 0;
       if (!isTargetOnline) {
           logger.warn("WebRTC target offline", { userId: user.userId, targetId: payload.targetId });
           return;
@@ -85,19 +87,16 @@ export function registerScreenShareHandlers(
       });
       
       // VULN-026 FIX: Emit directly to target socket instead of room broadcast
-      const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
-      if (targetSockets && targetSockets.length > 0) {
-        targetSockets.forEach(targetSocketId => {
-          io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_OFFER_RECEIVED, { 
-            sourceId: user.userId, 
-            targetId: payload.targetId,
-            offer: {
-              sdp: payload.offer.sdp,
-              type: payload.offer.type
-            }
-          });
+      targetSockets.forEach(targetSocketId => {
+        io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_OFFER_RECEIVED, { 
+          sourceId: user.userId, 
+          targetId: payload.targetId,
+          offer: {
+            sdp: payload.offer.sdp,
+            type: payload.offer.type
+          }
         });
-      }
+      });
     } catch (e: any) {
       logger.error("WebRTC offer error", { error: e.message, userId: user.userId });
     }
@@ -118,8 +117,16 @@ export function registerScreenShareHandlers(
       // VULN-024 FIX: Authorization check for answers. 
       // Only the screen sharer (host/cohost) should be receiving answers, and the responder should be a valid participant.
       // We check that the target is a valid online user.
-      const isTargetOnline = await redisClient.sIsMember(`room:${user.roomId}:users`, payload.targetId);
+      const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
+      const isTargetOnline = targetSockets && targetSockets.length > 0;
       if (!isTargetOnline) return;
+
+      const participantRepo = new ParticipantRepository();
+      const targetParticipant = await participantRepo.findById(payload.targetId);
+      if (!targetParticipant || (targetParticipant.role !== "HOST" && targetParticipant.role !== "COHOST")) {
+        logger.warn("WebRTC answer recipient is not a Host or Cohost", { userId: user.userId, targetId: payload.targetId });
+        return;
+      }
       
       const allowed = await consumeTokenBucket(user.userId, "webrtc_signal", 20, 5);
       if (!allowed) return;
@@ -134,19 +141,16 @@ export function registerScreenShareHandlers(
       });
 
       // VULN-026 FIX: Emit directly to target socket instead of room broadcast
-      const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
-      if (targetSockets && targetSockets.length > 0) {
-        targetSockets.forEach(targetSocketId => {
-          io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_ANSWER_RECEIVED, { 
-            sourceId: user.userId, 
-            targetId: payload.targetId,
-            answer: {
-              sdp: payload.answer.sdp,
-              type: payload.answer.type
-            }
-          });
+      targetSockets.forEach(targetSocketId => {
+        io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_ANSWER_RECEIVED, { 
+          sourceId: user.userId, 
+          targetId: payload.targetId,
+          answer: {
+            sdp: payload.answer.sdp,
+            type: payload.answer.type
+          }
         });
-      }
+      });
     } catch (e: any) {
       logger.error("WebRTC answer error", { error: e.message, userId: user.userId });
     }
@@ -164,13 +168,24 @@ export function registerScreenShareHandlers(
       await redisClient.expire(`room:${user.roomId}:ice:${requestId}`, 60);
     }
 
-    const isTargetOnline = await redisClient.sIsMember(`room:${user.roomId}:users`, payload.targetId);
+    const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
+    const isTargetOnline = targetSockets && targetSockets.length > 0;
     if (!isTargetOnline) return;
 
     // VULN-025 FIX: Authorization on ICE Candidate.
     // The sender must be host/cohost OR the target must be host/cohost (sharing screen).
     // A regular participant shouldn't send ICE candidates to another regular participant.
-    // (We allow it if either side is host/cohost, simplifying the check).
+    const senderIsHost = await checkIsHostOrCohost();
+    let targetIsHost = false;
+    if (!senderIsHost) {
+      const participantRepo = new ParticipantRepository();
+      const targetParticipant = await participantRepo.findById(payload.targetId);
+      targetIsHost = !!(targetParticipant && (targetParticipant.role === "HOST" || targetParticipant.role === "COHOST"));
+    }
+    if (!senderIsHost && !targetIsHost) {
+      logger.warn("Unauthorized ICE candidate exchange attempt", { userId: user.userId, targetId: payload.targetId });
+      return;
+    }
     
     const allowed = await consumeTokenBucket(user.userId, "webrtc_ice", 50, 20);
     if (!allowed) return;
@@ -185,16 +200,13 @@ export function registerScreenShareHandlers(
     });
 
     // VULN-026 FIX: Emit directly to target socket
-    const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
-    if (targetSockets && targetSockets.length > 0) {
-      targetSockets.forEach(targetSocketId => {
-        io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_ICE_CANDIDATE_RECEIVED, {
-          sourceId: user.userId,
-          targetId: payload.targetId,
-          candidate: payload.candidate,
-        });
+    targetSockets.forEach(targetSocketId => {
+      io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_ICE_CANDIDATE_RECEIVED, {
+        sourceId: user.userId,
+        targetId: payload.targetId,
+        candidate: payload.candidate,
       });
-    }
+    });
   });
 
   socket.on(SocketEvents.START_SCREEN_SHARE, async (payload, callback) => {
