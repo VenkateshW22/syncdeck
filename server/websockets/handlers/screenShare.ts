@@ -88,7 +88,7 @@ export function registerScreenShareHandlers(
       const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
       if (targetSockets && targetSockets.length > 0) {
         targetSockets.forEach(targetSocketId => {
-          io.to(targetSocketId).emit(SocketEvents.WEBRTC_OFFER_RECEIVED, { 
+          io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_OFFER_RECEIVED, { 
             sourceId: user.userId, 
             targetId: payload.targetId,
             offer: {
@@ -137,7 +137,7 @@ export function registerScreenShareHandlers(
       const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
       if (targetSockets && targetSockets.length > 0) {
         targetSockets.forEach(targetSocketId => {
-          io.to(targetSocketId).emit(SocketEvents.WEBRTC_ANSWER_RECEIVED, { 
+          io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_ANSWER_RECEIVED, { 
             sourceId: user.userId, 
             targetId: payload.targetId,
             answer: {
@@ -188,7 +188,7 @@ export function registerScreenShareHandlers(
     const targetSockets = await redisClient.sMembers(`room:${user.roomId}:participant:${payload.targetId}:sockets`);
     if (targetSockets && targetSockets.length > 0) {
       targetSockets.forEach(targetSocketId => {
-        io.to(targetSocketId).emit(SocketEvents.WEBRTC_ICE_CANDIDATE_RECEIVED, {
+        io.of("/ws/rooms").to(targetSocketId).emit(SocketEvents.WEBRTC_ICE_CANDIDATE_RECEIVED, {
           sourceId: user.userId,
           targetId: payload.targetId,
           candidate: payload.candidate,

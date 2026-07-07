@@ -52,8 +52,31 @@ export function NextActionPanel({ resources }: NextActionPanelProps) {
   const styleConfig = getStyle(currentAction.type);
 
   const handleCtaClick = () => {
-    // Basic smooth scroll down to the content area
-    window.scrollBy({ top: 300, behavior: 'smooth' });
+    let elementId = "";
+    if (currentAction.type === "POLL") {
+      elementId = "active-poll-container";
+    } else if (currentAction.type === "WHITEBOARD") {
+      elementId = "shared-canvas-container";
+    } else if (currentAction.type === "NEW_RESOURCE") {
+      elementId = currentAction.payload?.id 
+        ? `participant-resource-${currentAction.payload.id}` 
+        : "resources-container";
+    } else if (currentAction.type === "REVIEW_NOTES") {
+      elementId = "personal-notes-container";
+    }
+
+    const element = elementId ? document.getElementById(elementId) : null;
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      
+      // Premium highlight effect (temporary border ring, scaling, shadow pulse)
+      element.classList.add("ring-4", "ring-indigo-500", "dark:ring-indigo-400", "scale-[1.01]", "shadow-2xl", "z-10", "transition-all", "duration-300");
+      setTimeout(() => {
+        element.classList.remove("ring-4", "ring-indigo-500", "dark:ring-indigo-400", "scale-[1.01]", "shadow-2xl", "z-10");
+      }, 2000);
+    } else {
+      window.scrollBy({ top: 300, behavior: 'smooth' });
+    }
   };
 
   return (

@@ -409,14 +409,18 @@ export function ParticipantDashboard() {
         <div className="flex-1 overflow-auto p-4 w-full xl:max-w-7xl mx-auto space-y-4">
           <NextActionPanel resources={resources} />
           
+          {/* Centered big whiteboard */}
+          <div className="w-full">
+            <SharedCanvas isHost={isCohost} />
+          </div>
+          
           {/* Main interactive area: split into two columns on large screens */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="space-y-4">
               <ScreenShareViewer />
               <QuickPollParticipant />
-              <SharedCanvas isHost={isCohost} />
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4" id="personal-notes-container">
               <PersonalNotesPanel roomId={roomId} resources={resources} />
               <LiveActivityFeed participants={participants} />
             </div>
@@ -436,26 +440,29 @@ export function ParticipantDashboard() {
               <p className="text-slate-500 dark:text-slate-400 mt-2">Waiting for the host to share resources.</p>
             </div>
           )}
-          {resources.map((r) => (
-            isCohost ? (
-              <EditableResourceItem 
-                key={r.id} 
-                resource={r as any} 
-                socket={socket} 
-                token={token} 
-                onOptimisticEdit={(id, updates) => {
-                  mergeResources([{ id, ...updates } as any]);
-                }}
-                onOptimisticRemove={(id) => {
-                  useRoomStore.getState().setResources(
-                    useRoomStore.getState().resources.filter((r) => r.id !== id)
-                  );
-                }}
-              />
-            ) : (
-              <ParticipantResourceItem key={r.id} resource={r as any} token={token} />
-            )
-          ))}
+          
+          <div id="resources-container" className="space-y-4">
+            {resources.map((r) => (
+              isCohost ? (
+                <EditableResourceItem 
+                  key={r.id} 
+                  resource={r as any} 
+                  socket={socket} 
+                  token={token} 
+                  onOptimisticEdit={(id, updates) => {
+                    mergeResources([{ id, ...updates } as any]);
+                  }}
+                  onOptimisticRemove={(id) => {
+                    useRoomStore.getState().setResources(
+                      useRoomStore.getState().resources.filter((r) => r.id !== id)
+                    );
+                  }}
+                />
+              ) : (
+                <ParticipantResourceItem key={r.id} resource={r as any} token={token} />
+              )
+            ))}
+          </div>
         </div>
       </div>
       <SidebarChat

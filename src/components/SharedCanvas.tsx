@@ -55,7 +55,7 @@ export function SharedCanvas({ isHost = false }: { isHost?: boolean }) {
         const isMobile = window.innerWidth < 768;
         setDimensions({
           width: parentWidth,
-          height: isMobile ? Math.min(300, parentWidth * 0.75) : Math.min(400, parentWidth * 0.6),
+          height: isMobile ? Math.min(350, parentWidth * 0.75) : Math.min(550, parentWidth * 0.5),
         });
       }
     };
@@ -266,6 +266,7 @@ export function SharedCanvas({ isHost = false }: { isHost?: boolean }) {
 
   return (
     <div
+      id="shared-canvas-container"
       className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-slate-200/50 dark:border-white/5 rounded-2xl shadow-sm flex flex-col items-center p-5 relative w-full"
       ref={containerRef}
     >

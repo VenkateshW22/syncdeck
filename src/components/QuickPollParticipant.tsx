@@ -38,7 +38,7 @@ export function QuickPollParticipant() {
   };
 
   return (
-    <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-indigo-200/45 dark:border-indigo-500/20 p-5 rounded-2xl mb-4 shadow-sm w-full relative overflow-hidden transition duration-200">
+    <div id="active-poll-container" className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl border border-indigo-200/45 dark:border-indigo-500/20 p-5 rounded-2xl mb-4 shadow-sm w-full relative overflow-hidden transition duration-200">
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500" />
       
       <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100 dark:border-white/5">

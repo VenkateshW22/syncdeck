@@ -133,11 +133,12 @@ jobs:
             --service-account="${{ secrets.GCP_PROJECT_NUMBER }}-compute@developer.gserviceaccount.com"
             --session-affinity
             --min-instances=1
-            --max-instances=20
+            --max-instances=1
             --port=3000
             --cpu=2
             --memory=2Gi
             --set-env-vars="NODE_ENV=production,APP_ORIGIN=${{ secrets.APP_ORIGIN }},APP_URL=${{ secrets.APP_ORIGIN }}"
+            --allow-unauthenticated
             --quiet
           )
 
